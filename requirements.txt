@@ -1,0 +1,13 @@
+torch
+torchvision
+numpy
+pandas
+scikit-learn
+matplotlib
+
+jupyter
+notebook
+black
+isort
+mypy
+pylint
