@@ -1,5 +1,8 @@
 # Local
 data
+materials
+checkpoints
+tensorboard
 
 
 # Byte-compiled / optimized / DLL files

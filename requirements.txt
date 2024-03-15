@@ -5,9 +5,12 @@ matplotlib
 jupyter
 notebook
 tqdm
+tensorboard
 
 torch
 torchvision
+accelerate
+albumentations
 
 # dev
 # black
