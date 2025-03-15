@@ -16,7 +16,7 @@ WeightInitName = Literal[
 
 def main() -> None:
     seed_everything(42)
-    os.makedirs("plots")
+    os.makedirs("plots", exist_ok=True)
 
     for act_func in [sigmoid, tanh, relu]:
         weight_init_experiment(init_type="random", act_func=act_func, std=0.01)
@@ -61,11 +61,14 @@ def weight_init_experiment(
     else:
         raise NotImplementedError
 
+    # in xavier, the mistake is intentional to mark ReLU case
+    gain = 2 ** 0.5 if "relu" in act_func.__name__ and "xavier" not in tag else 1.0
+
     dims = [h_dim] * layers_num
     hidden_states = []
     x = torch.randn(batch_size, dims[0])
     for h_in, h_out in zip(dims[:-1], dims[1:]):
-        weights = weight_init(h_in=h_in, h_out=h_out, std=std)
+        weights = weight_init(h_in=h_in, h_out=h_out, std=std, gain=gain)
         x = act_func(x @ weights)
         hidden_states.append(x.reshape(-1))
 
@@ -73,35 +76,35 @@ def weight_init_experiment(
 
 
 def _random_weight_init(
-    h_in: int, h_out: int, std: float = 0.01
+    h_in: int, h_out: int, std: float = 0.01, **_
 ) -> Tensor:
     return torch.randn(h_in, h_out) * std
 
 
 def _xavier_uni_weight_init(
-    h_in: int, h_out: int, **_
+    h_in: int, h_out: int, gain: float = 1.0, **_
 ) -> Tensor:
-    a = (6 / (h_in + h_out)) ** 0.5
+    a = gain * (6 / (h_in + h_out)) ** 0.5
     return (torch.rand(h_in, h_out) * 2 - 1) * a
 
 
 def _xavier_norm_weight_init(
-    h_in: int, h_out: int, **_
+    h_in: int, h_out: int, gain: float = 1.0, **_
 ) -> Tensor:
-    return torch.randn(h_in, h_out) * (2 / (h_in + h_out)) ** 0.5
+    return torch.randn(h_in, h_out) * gain * (2 / (h_in + h_out)) ** 0.5
 
 
 def _kaiming_uni_weight_init(
-    h_in: int, h_out: int, **_
+    h_in: int, h_out: int, gain: float = 1.0, **_
 ) -> Tensor:
-    a = (3 / h_in) ** 0.5
-    return (torch.randn(h_in, h_out) * 2 - 1) * a
+    a = gain * (3 / h_in) ** 0.5
+    return (torch.rand(h_in, h_out) * 2 - 1) * a
 
 
 def _kaiming_norm_weight_init(
-    h_in: int, h_out: int, **_
+    h_in: int, h_out: int, gain: float = 1.0, **_
 ) -> Tensor:
-    return torch.randn(h_in, h_out) * (2 / h_in) ** 0.5
+    return torch.randn(h_in, h_out) * gain * (1 / h_in) ** 0.5
 
 
 def plot_histograms(hidden_states: list[Tensor], tag: str) -> None:
