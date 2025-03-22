@@ -3,6 +3,7 @@ data
 materials
 checkpoints
 tensorboard
+*.pt
 
 
 # Byte-compiled / optimized / DLL files
