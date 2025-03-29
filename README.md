@@ -25,6 +25,10 @@ PyTorch, Google Colab
 Обучение моделей в PyTorch
 
 
+### Занятие 6
+Сверточные сети
+
+
 ## Установка окружения
 ```console
 python -m venv venv
