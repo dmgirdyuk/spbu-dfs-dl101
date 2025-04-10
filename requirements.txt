@@ -13,7 +13,7 @@ accelerate
 albumentations
 
 # dev
-# black
+# black[jupyter]
 # isort
 # mypy
 # pylint

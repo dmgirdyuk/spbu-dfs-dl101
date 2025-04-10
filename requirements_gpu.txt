@@ -7,14 +7,14 @@ notebook
 tqdm
 tensorboard
 
---extra-index-url https://download.pytorch.org/whl/cu121
+--extra-index-url https://download.pytorch.org/whl/cu124
 torch
 torchvision
 accelerate
 albumentations
 
 # dev
-# black
+# black[jupyter]
 # isort
 # mypy
 # pylint
