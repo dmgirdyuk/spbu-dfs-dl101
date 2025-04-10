@@ -4,7 +4,7 @@ import os
 from dataclasses import dataclass
 from os.path import join as pjoin
 from pathlib import Path
-from shutil import rmtree, copyfile
+from shutil import copyfile, rmtree
 
 import torch
 from accelerate import Accelerator

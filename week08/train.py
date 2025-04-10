@@ -4,14 +4,13 @@ from typing import Optional
 
 import torch
 from accelerate import Accelerator
-from torch import nn, optim, Tensor
+from checkpointer import CheckpointSaver
+from torch import Tensor, nn, optim
 from torch.nn import functional as F  # noqa
 from torch.optim.lr_scheduler import LRScheduler
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from tqdm.auto import tqdm
-
-from checkpointer import CheckpointSaver
 from utils import get_logger
 
 LOGGER = get_logger(__name__)
@@ -106,9 +105,7 @@ def train_step(
         accelerator.backward(loss)
         optimizer.step()
 
-        tb_logger.add_scalar(
-            f"{loss_name}_train_batch", loss.item(), global_train_step
-        )
+        tb_logger.add_scalar(f"{loss_name}_train_batch", loss.item(), global_train_step)
         for name in metric_fns:
             tb_logger.add_scalar(
                 f"{name}_train_batch", metrics[name], global_train_step
@@ -125,9 +122,7 @@ def train_step(
     for name in metric_fns:
         total_train_metrics[name] /= batches_num
         LOGGER.info("Train %s: %.5f", name, total_train_metrics[name])
-        tb_logger.add_scalar(
-            f"{name}_train_epoch", total_train_metrics[name], epoch
-        )
+        tb_logger.add_scalar(f"{name}_train_epoch", total_train_metrics[name], epoch)
 
     if save_on_train:
         checkpointer.save(
@@ -169,9 +164,7 @@ def validation_step(
 
         tb_logger.add_scalar(f"{loss_name}_val_batch", loss.item(), global_val_step)
         for name in metric_fns:
-            tb_logger.add_scalar(
-                f"{name}_val_batch", metrics[name], global_val_step
-            )
+            tb_logger.add_scalar(f"{name}_val_batch", metrics[name], global_val_step)
 
         global_val_step += 1
         batches_num += 1
