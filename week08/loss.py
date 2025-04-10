@@ -21,14 +21,17 @@ class MulticlassDiceLoss(nn.Module):
     def forward(self, logits: Tensor, targets: Tensor) -> Tensor:
         probas = F.softmax(logits, dim=1)
 
-        intersection = (targets * probas).sum((0, 2, 3)).clamp_min(self.eps)
-        cardinality = (targets + probas).sum((0, 2, 3)).clamp_min(self.eps)
+        intersection = (targets * probas).sum((0, 2, 3))
+        cardinality = (targets + probas).sum((0, 2, 3))
 
         dice_coefficient = (2.0 * intersection + self.eps) / (cardinality + self.eps)
 
         dice_loss = 1.0 - dice_coefficient
 
         mask = targets.sum((0, 2, 3)) > 0
-        dice_loss *= mask
+        dice_loss = dice_loss * mask
 
-        return dice_loss.mean()
+        if mask.sum() > 0:
+            return dice_loss.sum() / mask.sum()
+
+        return dice_loss.sum()
