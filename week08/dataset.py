@@ -66,7 +66,7 @@ class CustomVOCSegmentation(datasets.VOCSegmentation):
         assert self.transform is not None
 
         augmented = self.transform(image=img, mask=target)
-        return augmented["image"].float(), augmented["mask"].float().permute(2, 0, 1)
+        return augmented["image"].float(), augmented["mask"].float()
 
     @staticmethod
     def _convert_to_segmentation_mask(mask: NDArray[np.uint8]) -> NDArray[np.uint8]:

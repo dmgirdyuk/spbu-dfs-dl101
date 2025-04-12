@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from typing import cast
+from typing import Optional, cast
 
 import torch
-from torch import nn
+from torch import Tensor, nn
 
 LongTensor = torch.LongTensor
 
@@ -12,9 +12,9 @@ class IoUMetric(nn.Module):
     def __init__(
         self,
         classes_num: int,
-        ignore_index: int | None = None,
-        reduction: str | None = None,
-        class_weights: list[float] | None = None,
+        ignore_index: Optional[int] = None,
+        reduction: Optional[str] = None,
+        class_weights: Optional[list[float]] = None,
     ) -> None:
         super().__init__()
 
@@ -26,9 +26,9 @@ class IoUMetric(nn.Module):
     @torch.no_grad()
     def forward(
         self,
-        output: torch.Tensor,
-        target: torch.Tensor,
-    ) -> torch.Tensor:
+        output: Tensor,
+        target: Tensor,
+    ) -> Tensor:
         # from
         # https://github.com/qubvel/segmentation_models.pytorch/blob/master
         # /segmentation_models_pytorch/metrics/functional.py
@@ -39,7 +39,7 @@ class IoUMetric(nn.Module):
         batch_size, height, width = outputs.shape
 
         if self.ignore_index is not None:
-            ignore = cast(torch.Tensor, targets == self.ignore_index)
+            ignore = cast(Tensor, targets == self.ignore_index)
             outputs = torch.where(ignore, -1, outputs)
             targets = torch.where(ignore, -1, targets)
 
@@ -91,9 +91,9 @@ def _compute_iou_metric(
     tp: LongTensor,
     fp: LongTensor,
     fn: LongTensor,
-    reduction: str | None = None,
-    class_weights: list[float] | None = None,
-) -> torch.Tensor:
+    reduction: Optional[str] = None,
+    class_weights: Optional[list[float]] = None,
+) -> Tensor:
     if class_weights is None and reduction is not None and "weighted" in reduction:
         raise ValueError(
             f"Class weights should be provided for `{reduction}` reduction."
@@ -146,11 +146,11 @@ def _compute_iou_metric(
     return score
 
 
-def _iou_score(tp: LongTensor, fp: LongTensor, fn: LongTensor) -> torch.Tensor:
+def _iou_score(tp: LongTensor, fp: LongTensor, fn: LongTensor) -> Tensor:
     return tp / (tp + fp + fn)
 
 
-def _handle_zero_division(x: torch.Tensor) -> torch.Tensor:
+def _handle_zero_division(x: Tensor) -> Tensor:
     nans = torch.isnan(x)
     value = torch.tensor(0.0, dtype=x.dtype).to(x.device)
     x = torch.where(nans, value, x)

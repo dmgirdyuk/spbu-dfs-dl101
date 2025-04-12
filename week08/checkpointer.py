@@ -9,6 +9,9 @@ from shutil import copyfile, rmtree
 import torch
 from accelerate import Accelerator
 from torch import nn
+from utils import get_logger
+
+LOGGER = get_logger(__name__)
 
 
 @dataclass
@@ -77,9 +80,11 @@ class CheckpointSaver:
             src=self._storage[0].save_path,
             dst=self.save_dir / "model_checkpoint_best.pt",
         )
-        print(
-            f"Best epoch {self.metric_name} value is {self._storage[0].metric_val:.4f} "
-            f"on {self._storage[0].epoch} epoch"
+        LOGGER.info(
+            f"Best epoch %s value is %.4f " f"on %d epoch",
+            self.metric_name,
+            self._storage[0].metric_val,
+            self._storage[0].epoch + 1,
         )
 
     def _save_checkpoint(

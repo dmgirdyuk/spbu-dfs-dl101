@@ -1,9 +1,9 @@
 # refactored code from https://github.com/mkisantal/backboned-unet
 # TODO: just use 'https://github.com/huggingface/pytorch-image-models/'?
-
+from typing import Optional
 
 import torch
-import torch.nn as nn
+from torch import Tensor, nn
 from torch.nn import functional as F  # noqa
 from torchvision import models
 from torchvision.models import (
@@ -20,7 +20,7 @@ from torchvision.models import (
     VGG19_Weights,
 )
 
-FeaturesT = dict[str | None, torch.Tensor | None]
+FeaturesT = dict[Optional[str], Optional[Tensor]]
 
 
 class CustomUNet(nn.Module):
@@ -32,7 +32,7 @@ class CustomUNet(nn.Module):
         classes_num: int = 21,
         decoder_filters: tuple[int] = (512, 256, 128, 64, 32),  # (256, 128, 64, 32, 16)
         parametric_upsampling: bool = False,
-        skip_connection_names: list[str] | None = None,
+        skip_connection_names: Optional[list[str]] = None,
         decoder_use_batchnorm: bool = True,
     ) -> None:
         super().__init__()
@@ -70,7 +70,7 @@ class CustomUNet(nn.Module):
         if freeze_encoder:
             self.freeze_encoder_parameters()
 
-    def forward(self, *input):
+    def forward(self, *input) -> Tensor:
         x, features = self.forward_backbone(*input)
 
         for skip_feature_name, upsample_block in zip(
@@ -81,7 +81,7 @@ class CustomUNet(nn.Module):
         x = self.final_conv(x)
         return x
 
-    def forward_backbone(self, x: torch.Tensor) -> tuple[torch.Tensor, FeaturesT]:
+    def forward_backbone(self, x: Tensor) -> tuple[Tensor, FeaturesT]:
         features: FeaturesT = {}
         if None in self.shortcut_features:
             features[None] = None
@@ -120,7 +120,9 @@ class CustomUNet(nn.Module):
             param.requires_grad = False
 
 
-def get_backbone(name: str, pretrained=True) -> tuple[nn.Module, list[str | None], str]:
+def get_backbone(
+    name: str, pretrained=True
+) -> tuple[nn.Module, list[Optional[str]], str]:
     if name == "resnet18":
         backbone = models.resnet18(
             weights=ResNet18_Weights.DEFAULT if pretrained else None
@@ -190,7 +192,7 @@ class UpsampleBlock(nn.Module):
     def __init__(
         self,
         channels_in: int,
-        channels_out: int | None = None,
+        channels_out: Optional[int] = None,
         skip_in: int = 0,
         use_bn: bool = True,
         parametric: bool = True,
@@ -237,9 +239,7 @@ class UpsampleBlock(nn.Module):
         )
         self.bn2 = nn.BatchNorm2d(channels_out) if use_bn else nn.Identity()
 
-    def forward(
-        self, x: torch.Tensor, skip_connection: torch.Tensor | None = None
-    ) -> torch.Tensor:
+    def forward(self, x: Tensor, skip_connection: Optional[Tensor] = None) -> Tensor:
         x = self.up(x)
         if self.parametric:
             x = self.bn1(x)
