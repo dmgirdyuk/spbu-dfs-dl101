@@ -7,9 +7,10 @@ from accelerate import Accelerator
 from checkpointer import CheckpointSaver
 from torch import Tensor, nn, optim
 from torch.nn import functional as F  # noqa
-from torch.optim.lr_scheduler import LRScheduler
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
+from torchmetrics import Metric
 from tqdm.auto import tqdm
 from utils import get_logger
 
@@ -22,8 +23,8 @@ def train(
     train_dataloader: DataLoader,
     val_dataloader: Optional[DataLoader],
     loss_fn: nn.Module,
-    metric_fns: dict[str, nn.Module],
-    lr_scheduler: LRScheduler,  # learning rate scheduler.
+    metric_fns: dict[str, Metric],
+    lr_scheduler: ReduceLROnPlateau,
     accelerator: Accelerator,
     epoch_num: int,
     checkpointer: CheckpointSaver,
@@ -45,7 +46,6 @@ def train(
             train_dataloader=train_dataloader,
             loss_fn=loss_fn,
             metric_fns=metric_fns,
-            lr_scheduler=lr_scheduler,
             accelerator=accelerator,
             checkpointer=checkpointer,
             tb_logger=tb_logger,
@@ -56,7 +56,7 @@ def train(
         if val_dataloader is None:
             continue
 
-        global_val_step = validation_step(
+        global_val_step, total_val_metric = validation_step(
             epoch=epoch,
             model=model,
             val_dataloader=val_dataloader,
@@ -68,6 +68,9 @@ def train(
             save_on_val=save_on_val,
         )
 
+        lr_scheduler.step(total_val_metric)
+        tb_logger.add_scalar(f"learning_rate", lr_scheduler.get_last_lr()[0], epoch)
+
 
 def train_step(
     epoch: int,
@@ -75,8 +78,7 @@ def train_step(
     optimizer: optim.Optimizer,
     train_dataloader: DataLoader,
     loss_fn: nn.Module,
-    metric_fns: dict[str, nn.Module],
-    lr_scheduler: LRScheduler,
+    metric_fns: dict[str, Metric],
     accelerator: Accelerator,
     checkpointer: CheckpointSaver,
     tb_logger: Optional[SummaryWriter],
@@ -97,30 +99,24 @@ def train_step(
         loss: Tensor = loss_fn(outputs, targets)
         total_train_loss += loss.item()
 
-        metrics: dict[str, float] = {}
-        for name, fn in metric_fns.items():
-            metrics[name] = fn(outputs, targets).item()
-            total_train_metrics[name] += metrics[name]
+        for metric_fn in metric_fns.values():
+            metric_fn.update(outputs, targets)
 
         accelerator.backward(loss)
         optimizer.step()
 
         tb_logger.add_scalar(f"{loss_name}_train_batch", loss.item(), global_train_step)
-        for name in metric_fns:
-            tb_logger.add_scalar(
-                f"{name}_train_batch", metrics[name], global_train_step
-            )
 
         global_train_step += 1
         batches_num += 1
 
-    lr_scheduler.step()
-
     total_train_loss /= batches_num
     LOGGER.info("Train %s: %.5f", loss_name, total_train_loss)
     tb_logger.add_scalar(f"{loss_name}_train_epoch", total_train_loss, epoch)
-    for name in metric_fns:
-        total_train_metrics[name] /= batches_num
+    for name, metric_fn in metric_fns.items():
+        total_train_metrics[name] = metric_fn.compute()
+        metric_fn.reset()
+
         LOGGER.info("Train %s: %.5f", name, total_train_metrics[name])
         tb_logger.add_scalar(f"{name}_train_epoch", total_train_metrics[name], epoch)
 
@@ -137,12 +133,12 @@ def validation_step(
     model: nn.Module,
     val_dataloader: DataLoader,
     loss_fn: nn.Module,
-    metric_fns: dict[str, nn.Module],
+    metric_fns: dict[str, Metric],
     checkpointer: CheckpointSaver,
     tb_logger: SummaryWriter | None,  # tensorboard logger
     global_val_step: int,
     save_on_val: bool = True,  # saves checkpoint on the validation stage
-) -> int:
+) -> tuple[int, float]:
     model.eval()
 
     loss_name = loss_fn.__class__.__name__
@@ -157,14 +153,10 @@ def validation_step(
             loss = loss_fn(outputs, targets)
             total_val_loss += loss.item()
 
-            metrics = {}
-            for name, fn in metric_fns.items():
-                metrics[name] = fn(outputs, targets).item()
-                total_val_metrics[name] += metrics[name]
+            for metric_fn in metric_fns.values():
+                metric_fn.update(outputs, targets)
 
         tb_logger.add_scalar(f"{loss_name}_val_batch", loss.item(), global_val_step)
-        for name in metric_fns:
-            tb_logger.add_scalar(f"{name}_val_batch", metrics[name], global_val_step)
 
         global_val_step += 1
         batches_num += 1
@@ -172,8 +164,10 @@ def validation_step(
     total_val_loss /= len(val_dataloader)
     LOGGER.info("Val %s: %.5f", loss_name, total_val_loss)
     tb_logger.add_scalar(f"{loss_name}_val_epoch", total_val_loss, epoch)
-    for name in metric_fns:
-        total_val_metrics[name] /= len(val_dataloader)
+    for name, metric_fn in metric_fns.items():
+        total_val_metrics[name] = metric_fn.compute()
+        metric_fn.reset()
+
         LOGGER.info("Val %s: %.5f", name, total_val_metrics[name])
         tb_logger.add_scalar(f"{name}_val_epoch", total_val_metrics[name], epoch)
 
@@ -182,7 +176,7 @@ def validation_step(
             metric_val=total_val_metrics[checkpointer.metric_name], epoch=epoch
         )
 
-    return global_val_step
+    return global_val_step, total_val_metrics[checkpointer.metric_name]
 
 
 def count_pytorch_model_params(model: nn.Module) -> int:
