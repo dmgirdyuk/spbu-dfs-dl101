@@ -12,7 +12,7 @@ tensorboard
 --extra-index-url https://download.pytorch.org/whl/cu124
 torch
 torchvision
-torchmetrics
+torchmetrics[detection]
 accelerate
 albumentations
 
