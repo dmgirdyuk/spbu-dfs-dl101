@@ -4,7 +4,6 @@ from typing import Optional
 
 import torch
 from accelerate import Accelerator
-from checkpointer import CheckpointSaver
 from torch import Tensor, nn, optim
 from torch.nn import functional as F  # noqa
 from torch.optim.lr_scheduler import ReduceLROnPlateau
@@ -12,6 +11,8 @@ from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from torchmetrics import Metric
 from tqdm.auto import tqdm
+
+from checkpointer import CheckpointSaver
 from utils import get_logger
 
 LOGGER = get_logger(__name__)
