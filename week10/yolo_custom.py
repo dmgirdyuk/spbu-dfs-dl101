@@ -9,31 +9,31 @@ from torch import Tensor, nn
 from utils import make_anchors
 
 
-def yolo_v8_n(classes_num: int = 21) -> YOLO:
+def yolo_v8_n(classes_num: int = 20) -> YOLO:
     depth = [1, 2, 2]
     width = [3, 16, 32, 64, 128, 256]
     return YOLO(width=width, depth=depth, classes_num=classes_num)
 
 
-def yolo_v8_s(classes_num: int = 21) -> YOLO:
+def yolo_v8_s(classes_num: int = 20) -> YOLO:
     depth = [1, 2, 2]
     width = [3, 32, 64, 128, 256, 512]
     return YOLO(width=width, depth=depth, classes_num=classes_num)
 
 
-def yolo_v8_m(classes_num: int = 21) -> YOLO:
+def yolo_v8_m(classes_num: int = 20) -> YOLO:
     depth = [2, 4, 4]
     width = [3, 48, 96, 192, 384, 576]
     return YOLO(width=width, depth=depth, classes_num=classes_num)
 
 
-def yolo_v8_l(classes_num: int = 21) -> YOLO:
+def yolo_v8_l(classes_num: int = 20) -> YOLO:
     depth = [3, 6, 6]
     width = [3, 64, 128, 256, 512, 512]
     return YOLO(width=width, depth=depth, classes_num=classes_num)
 
 
-def yolo_v8_x(classes_num: int = 21) -> YOLO:
+def yolo_v8_x(classes_num: int = 20) -> YOLO:
     depth = [3, 6, 6]
     width = [3, 80, 160, 320, 640, 640]
     return YOLO(width=width, depth=depth, classes_num=classes_num)
@@ -41,7 +41,7 @@ def yolo_v8_x(classes_num: int = 21) -> YOLO:
 
 class YOLO(nn.Module):
     def __init__(
-        self, width: list[int], depth: list[int], classes_num: int = 21
+        self, width: list[int], depth: list[int], classes_num: int = 20
     ) -> None:
         super().__init__()
 

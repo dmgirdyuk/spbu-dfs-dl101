@@ -14,13 +14,14 @@ from tqdm.auto import tqdm
 
 from checkpointer import CheckpointSaver
 from loss import YOLOLoss
-from utils import get_logger, non_max_suppression, wh2xy
+from utils import get_logger, non_max_suppression, xywh2xyxy
+from yolo_custom import YOLO
 
 LOGGER = get_logger(__name__)
 
 
 def train(
-    model: nn.Module,
+    model: nn.Module | YOLO,
     optimizer: optim.Optimizer,
     train_dataloader: DataLoader,
     val_dataloader: Optional[DataLoader],
@@ -74,7 +75,7 @@ def train(
 
 def train_step(
     epoch: int,
-    model: nn.Module,
+    model: nn.Module | YOLO,
     optimizer: optim.Optimizer,
     train_dataloader: DataLoader,
     loss_fn: nn.Module | YOLOLoss,
@@ -132,7 +133,7 @@ def validation_step(
                 preds=outputs, conf_thd=conf_thd, iou_thd=iou_thd
             )
             _, _, h, w = inputs.shape
-            targets[:, 2:] = wh2xy(targets[:, 2:])
+            targets[:, 2:] = xywh2xyxy(targets[:, 2:])
             targets[:, 2:] *= torch.tensor((w, h, w, h)).to(targets.device)
 
             metric_fn.update(outputs, targets)

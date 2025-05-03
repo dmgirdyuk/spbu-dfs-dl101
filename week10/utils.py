@@ -12,6 +12,8 @@ from torch import Tensor
 
 ImageT = NDArray[np.int8]
 
+EPSILON = 1e-8
+
 
 def get_logger(name: str, log_level: int = logging.INFO) -> logging.Logger:
     """Creates a logger."""
@@ -41,22 +43,15 @@ def make_anchors(
     for i, stride in enumerate(strides):
         stride = cast(Tensor, stride)
 
-        _, _, h, w = x[i].shape
-        sx = (
-            torch.arange(end=w, dtype=x[i].dtype, device=x[i].device) + offset
-        )  # shift x
-        sy = (
-            torch.arange(end=h, dtype=x[i].dtype, device=x[i].device) + offset
-        )  # shift y
+        h, w = x[i].shape[2:4]
+        dtype, device = x[0].dtype, x[0].device
+        sx = torch.arange(end=w, dtype=dtype, device=device) + offset
+        sy = torch.arange(end=h, dtype=dtype, device=device) + offset
         sy, sx = torch.meshgrid(sy, sx)
 
         anchor_points.append(torch.stack((sx, sy), -1).view(-1, 2))
 
-        strides_.append(
-            torch.full(
-                (h * w, 1), int(stride.item()), dtype=x[i].dtype, device=x[i].device
-            ),
-        )
+        strides_.append(torch.full((h * w, 1), stride, dtype=dtype, device=device))
 
     return torch.cat(anchor_points), torch.cat(strides_)
 
@@ -82,7 +77,7 @@ def non_max_suppression(
         # detections matrix nx6 (box, conf, cls)
         box, cls = x.split((4, classes_num), 1)
 
-        box = wh2xy(box)
+        box = xywh2xyxy(box)
 
         if classes_num > 1:
             i, j = (cls > conf_thd).nonzero(as_tuple=False).T
@@ -105,13 +100,34 @@ def non_max_suppression(
     return outputs
 
 
-def wh2xy(x: Tensor) -> Tensor:
-    x_new = x.clone()
-    x_new[..., 0] = x[..., 0] - x[..., 2] / 2  # top left x
-    x_new[..., 1] = x[..., 1] - x[..., 3] / 2  # top left y
-    x_new[..., 2] = x[..., 0] + x[..., 2] / 2  # bottom right x
-    x_new[..., 3] = x[..., 1] + x[..., 3] / 2  # bottom right y
+def xywh2xyxy(x: Tensor) -> Tensor:
+    x_new = torch.empty_like(x)
+    xy = x[..., :2]  # centers
+    wh = x[..., 2:] / 2  # half width-height
+    x_new[..., :2] = xy - wh  # top left xy
+    x_new[..., 2:] = xy + wh  # bottom right xy
     return x_new
+
+
+def dist2bbox(
+    distance: Tensor, anchor_points: Tensor, xywh: bool = True, dim: int = -1
+) -> Tensor:
+    lt, rb = distance.chunk(2, dim)
+    x1y1 = anchor_points - lt
+    x2y2 = anchor_points + rb
+    if xywh:
+        c_xy = (x1y1 + x2y2) / 2
+        wh = x2y2 - x1y1
+        return torch.cat((c_xy, wh), dim)  # xywh bbox
+
+    return torch.cat((x1y1, x2y2), dim)  # xyxy bbox
+
+
+def bbox2dist(anchor_points: Tensor, bbox: Tensor, reg_max: float) -> Tensor:
+    x1y1, x2y2 = bbox.chunk(2, -1)
+    return torch.cat(
+        (anchor_points - x1y1, x2y2 - anchor_points), -1
+    ).clamp_(0, reg_max - 0.01)
 
 
 def add_bboxes_on_img(
@@ -152,7 +168,7 @@ def add_bboxes_on_img(
     )
 
     (text_width, text_height), _ = cv2.getTextSize(
-        label, cv2.FONT_HERSHEY_SIMPLEX, 0.35, 1
+        text=label, fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1.0, thickness=2
     )
     cv2.rectangle(
         img,
@@ -166,7 +182,7 @@ def add_bboxes_on_img(
         text=label,
         org=(x_min, y_min - int(0.3 * text_height)),
         fontFace=cv2.FONT_HERSHEY_SIMPLEX,
-        fontScale=0.35,
+        fontScale=1.0,
         color=text_color,
         lineType=cv2.LINE_AA,
     )
