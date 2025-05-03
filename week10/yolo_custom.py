@@ -1,3 +1,5 @@
+# refactored version from https://github.com/jahongir7174/YOLOv8-pt/
+
 from __future__ import annotations
 
 import math
@@ -188,7 +190,10 @@ class Residual(nn.Module):
         super().__init__()
 
         self.add_m = add
-        self.res_m = nn.Sequential(ConvBlock(ch, ch, 3), ConvBlock(ch, ch, 3))
+        self.res_m = nn.Sequential(
+            ConvBlock(in_channels=ch, out_channels=ch, kernel_size=3),
+            ConvBlock(in_channels=ch, out_channels=ch, kernel_size=3),
+        )
 
     def forward(self, x: Tensor) -> Tensor:
         return self.res_m(x) + x if self.add_m else self.res_m(x)
@@ -198,9 +203,9 @@ class SPPF(nn.Module):
     def __init__(self, in_channels: int, out_channels: int, k: int = 5) -> None:
         super().__init__()
 
-        self.conv1 = ConvBlock(in_channels, in_channels // 2)
-        self.conv2 = ConvBlock(in_channels * 2, out_channels)
-        self.res_m = nn.MaxPool2d(k, 1, k // 2)
+        self.conv1 = ConvBlock(in_channels=in_channels, out_channels=in_channels // 2)
+        self.conv2 = ConvBlock(in_channels=in_channels * 2, out_channels=out_channels)
+        self.res_m = nn.MaxPool2d(kernel_size=k, stride=1, padding=k // 2)
 
     def forward(self, x: Tensor) -> Tensor:
         x = self.conv1(x)
@@ -314,8 +319,9 @@ class Head(nn.Module):
         m = self
         for a, b, s in zip(m.box, m.cls, m.stride):
             a[-1].bias.data[:] = 1.0
-            prior = 0.01
-            b[-1].bias.data[: m.classes_num] = -math.log((1 - prior) / prior)
+            b[-1].bias.data[: m.classes_num] = math.log(
+                5 / m.classes_num / (640 / s) ** 2
+            )
 
 
 class DFL(nn.Module):
@@ -325,7 +331,9 @@ class DFL(nn.Module):
         super().__init__()
 
         self.channels = channels
-        self.conv = nn.Conv2d(channels, 1, 1, bias=False).requires_grad_(False)
+        self.conv = nn.Conv2d(
+            in_channels=channels, out_channels=1, kernel_size=1, bias=False
+        ).requires_grad_(False)
         x = torch.arange(channels, dtype=torch.float).view(1, channels, 1, 1)
         self.conv.weight.data[:] = nn.Parameter(x)
 

@@ -1,3 +1,5 @@
+# From https://github.com/ultralytics/ultralytics
+
 import math
 from typing import Optional, cast
 
