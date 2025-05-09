@@ -284,7 +284,7 @@ class TaskAlignedAssigner(nn.Module):
     def __init__(
         self,
         top_k: int = 10,
-        classes_num: int = 21,
+        classes_num: int = 20,
         alpha: float = 0.5,
         beta: float = 6.0,
         eps: float = EPSILON,

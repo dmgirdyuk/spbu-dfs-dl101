@@ -31,7 +31,7 @@ def train(
     accelerator: Accelerator,
     epoch_num: int,
     checkpointer: CheckpointSaver,
-    tb_logger: Optional[SummaryWriter],
+    tb_logger: SummaryWriter,
     conf_thd: float = 0.001,
     iou_thd: float = 0.65,
 ) -> None:
@@ -82,6 +82,7 @@ def train_step(
     accelerator: Accelerator,
     tb_logger: Optional[SummaryWriter],
     global_train_step: int,
+    gradient_clip_thd: float = 10.0,
 ) -> int:
     model.train()
 
@@ -97,6 +98,7 @@ def train_step(
         total_train_loss += loss.item()
 
         accelerator.backward(loss)
+        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=gradient_clip_thd)
         optimizer.step()
 
         tb_logger.add_scalar(f"{loss_name}_train_batch", loss.item(), global_train_step)
@@ -117,7 +119,7 @@ def validation_step(
     val_dataloader: DataLoader,
     metric_fn: Metric,
     checkpointer: CheckpointSaver,
-    tb_logger: SummaryWriter | None,
+    tb_logger: SummaryWriter,
     global_val_step: int,
     conf_thd: float = 0.001,
     iou_thd: float = 0.65,
