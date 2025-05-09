@@ -1,6 +1,7 @@
 # Local
 data
 materials
+third_party
 checkpoints
 tensorboard
 *.pt
