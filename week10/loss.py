@@ -45,10 +45,12 @@ class YOLOLoss:
         self.box_coef = box_coef
         self.dfl_coef = dfl_coef
 
-    def __call__(self, preds: tuple[Tensor, ...] | Tensor, targets: Tensor) -> Tensor:
+    def __call__(self, preds: list[Tensor], targets: Tensor) -> Tensor:
         loss = torch.zeros(3, device=self.device)  # box, cls, dfl
 
-        feats = preds[1] if isinstance(preds, tuple) else preds
+        # in the ultralytics YOLO, model returns tuple of preds and features
+        # feats = preds[1] if isinstance(preds, tuple) else preds
+        feats = preds
         pred_distri, pred_scores = torch.cat(
             [xi.view(feats[0].shape[0], self.outputs_num, -1) for xi in feats], 2
         ).split((self.reg_max * 4, self.classes_num), 1)
@@ -273,7 +275,6 @@ class TaskAlignedAssigner(nn.Module):
     Attributes:
         top_k (int): The number of top candidates to consider.
         classes_num (int): The number of object classes.
-        bg_idx (int): Background class index.
         alpha (float): The alpha parameter for the classification component of the
             task-aligned metric.
         beta (float): The beta parameter for the localization component of the
