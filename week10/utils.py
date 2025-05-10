@@ -61,7 +61,7 @@ def non_max_suppression(
     conf_thd: float = 0.001,
     iou_thd: float = 0.65,
     max_wh: int = 7680,  # maximum box width and height
-    max_det: int = 300,  # maximum number of boxes to keep after NMS
+    max_det: int = 100,  # maximum number of boxes to keep after NMS
     max_nms: int = 30000,  # maximum number of boxes into torchvision.ops.nms()
 ) -> list[Tensor]:
     classes_num = preds.shape[1] - 4  # number of classes

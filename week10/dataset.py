@@ -44,7 +44,7 @@ class CustomVOCDetectionDataset(VOCDetection):
         assert self.transform is not None
 
         augmented = self.transform(image=img, bboxes=bboxes, label_ids=label_ids)
-        img = augmented["image"].float()
+        img = augmented["image"].float() / 255.0
         target = {
             "bboxes": torch.tensor(augmented["bboxes"], dtype=torch.float32),
             "label_ids": torch.tensor(augmented["label_ids"], dtype=torch.int32),
