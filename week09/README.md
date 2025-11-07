@@ -1,0 +1,12 @@
+- CS231n, детекция, семантическая сегменатция, инстанс сегментация:
+    https://cs231n.stanford.edu/slides/2022/lecture_9_jiajun.pdf
+- Двухстадийные детекторы:
+  - R-CNN: https://arxiv.org/pdf/1311.2524
+  - Fast R-CNN: https://arxiv.org/pdf/1504.08083
+  - Faster R-CNN: https://arxiv.org/pdf/1506.01497
+  - Mask R-CNN: https://arxiv.org/pdf/1703.06870
+- Одностадийные детекторы:
+  - YOLOv1: https://arxiv.org/abs/1506.02640
+  - YOLOv2: https://arxiv.org/abs/1612.08242
+  - YOLOv3: https://arxiv.org/abs/1804.02767
+  - ultralytics' YOLO: https://docs.ultralytics.com/ru/models/yolo11/
