@@ -9,7 +9,7 @@ notebook
 tqdm
 tensorboard
 
-torch
+torch==2.9.1
 torchvision
 torchmetrics[detection]
 accelerate

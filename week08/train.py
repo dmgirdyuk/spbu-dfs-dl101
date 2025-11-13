@@ -10,7 +10,7 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from torchmetrics import Metric
-from tqdm.auto import tqdm
+from tqdm import tqdm
 
 from checkpointer import CheckpointSaver
 from utils import get_logger
