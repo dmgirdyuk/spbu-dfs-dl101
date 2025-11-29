@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import math
-from typing import Optional
+from typing import List, Optional, Union
 
 import torch
 from torch import Tensor, nn
 
 from utils import make_anchors
+
+
+TRAINING_IMAGE_SIZE = 640
 
 
 def yolo_v8_n(classes_num: int = 20) -> YOLO:
@@ -211,7 +214,8 @@ class SPPF(nn.Module):
         x = self.conv1(x)
         y1 = self.res_m(x)
         y2 = self.res_m(y1)
-        return self.conv2(torch.cat([x, y1, y2, self.res_m(y2)], 1))
+        y3 = self.res_m(y2)
+        return self.conv2(torch.cat([x, y1, y2, y3], 1))
 
 
 class DarkFPN(nn.Module):
@@ -295,7 +299,7 @@ class Head(nn.Module):
             for x in filters
         )
 
-    def forward(self, x: Tensor) -> Tensor:
+    def forward(self, x: List[Tensor]) -> Union[List[Tensor], Tensor]:
         for i in range(self.layers_num):
             x[i] = torch.cat((self.box[i](x[i]), self.cls[i](x[i])), 1)
 
@@ -306,8 +310,8 @@ class Head(nn.Module):
             x.transpose(0, 1) for x in make_anchors(x, self.stride, 0.5)
         )
 
-        x = torch.cat([i.view(x[0].shape[0], self.outputs_num, -1) for i in x], 2)
-        box, cls = x.split((self.channels * 4, self.classes_num), 1)
+        x_ = torch.cat([i.view(x[0].shape[0], self.outputs_num, -1) for i in x], 2)
+        box, cls = x_.split((self.channels * 4, self.classes_num), 1)
         a, b = torch.split(self.dfl(box), 2, 1)
         a = self.anchors.unsqueeze(0) - a
         b = self.anchors.unsqueeze(0) + b
@@ -320,7 +324,7 @@ class Head(nn.Module):
         for a, b, s in zip(m.box, m.cls, m.stride):
             a[-1].bias.data[:] = 1.0
             b[-1].bias.data[: m.classes_num] = math.log(
-                5 / m.classes_num / (640 / s) ** 2
+                5 / m.classes_num / (TRAINING_IMAGE_SIZE / s) ** 2
             )
 
 
@@ -338,6 +342,6 @@ class DFL(nn.Module):
         self.conv.weight.data[:] = nn.Parameter(x)
 
     def forward(self, x: Tensor) -> Tensor:
-        b, c, a = x.shape
+        b, _, a = x.shape
         x = x.view(b, 4, self.channels, a).transpose(2, 1)
         return self.conv(x.softmax(1)).view(b, 4, a)
