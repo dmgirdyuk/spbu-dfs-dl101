@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import math
-from typing import List, Optional, Union
 
 import torch
 from torch import Tensor, nn
@@ -61,7 +60,6 @@ class YOLO(nn.Module):
             [256 / x.shape[-2] for x in self.forward(img_dummy)]
         )
         self.stride = self.head.stride
-
         self.head.initialize_biases()
 
     def forward(self, x: Tensor) -> Tensor:
@@ -127,7 +125,7 @@ class ConvBlock(nn.Module):
         out_channels: int,
         kernel_size: int = 1,
         stride: int = 1,
-        padding: Optional[int] = None,
+        padding: int | None = None,
         dilation: int = 1,
         groups: int = 1,
         bn_eps: float = 0.001,
@@ -155,7 +153,7 @@ class ConvBlock(nn.Module):
 
 
 def get_padding(
-    kernel_size: int, padding: Optional[int] = None, dilation: int = 1
+    kernel_size: int, padding: int | None = None, dilation: int = 1
 ) -> int:
     if dilation > 1:
         kernel_size = dilation * (kernel_size - 1) + 1
@@ -299,7 +297,7 @@ class Head(nn.Module):
             for x in filters
         )
 
-    def forward(self, x: List[Tensor]) -> Union[List[Tensor], Tensor]:
+    def forward(self, x: list[Tensor]) -> list[Tensor] | Tensor:
         for i in range(self.layers_num):
             x[i] = torch.cat((self.box[i](x[i]), self.cls[i](x[i])), 1)
 
@@ -307,7 +305,7 @@ class Head(nn.Module):
             return x
 
         self.anchors, self.strides = (
-            x.transpose(0, 1) for x in make_anchors(x, self.stride, 0.5)
+            i.transpose(0, 1) for i in make_anchors(x, self.stride, 0.5)
         )
 
         x_ = torch.cat([i.view(x[0].shape[0], self.outputs_num, -1) for i in x], 2)
@@ -343,5 +341,5 @@ class DFL(nn.Module):
 
     def forward(self, x: Tensor) -> Tensor:
         b, _, a = x.shape
-        x = x.view(b, 4, self.channels, a).transpose(2, 1)
+        x = x.view(b, 4, self.channels, a).transpose(1, 2)
         return self.conv(x.softmax(1)).view(b, 4, a)

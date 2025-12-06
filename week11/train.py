@@ -1,11 +1,8 @@
 from __future__ import annotations
 
-from typing import Optional
-
 import torch
 from accelerate import Accelerator
 from torch import Tensor, nn, optim
-from torch.nn import functional as F  # noqa
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
@@ -24,7 +21,7 @@ def train(
     model: nn.Module | YOLO,
     optimizer: optim.Optimizer,
     train_dataloader: DataLoader,
-    val_dataloader: Optional[DataLoader],
+    val_dataloader: DataLoader | None,
     loss_fn: nn.Module | YOLOLoss,
     metric_fn: Metric,
     lr_scheduler: ReduceLROnPlateau,
@@ -70,7 +67,7 @@ def train(
         )
 
         lr_scheduler.step(total_val_metric)
-        tb_logger.add_scalar(f"learning_rate", lr_scheduler.get_last_lr()[0], epoch)
+        tb_logger.add_scalar("learning_rate", lr_scheduler.get_last_lr()[0], epoch)
 
 
 def train_step(
@@ -80,7 +77,7 @@ def train_step(
     train_dataloader: DataLoader,
     loss_fn: nn.Module | YOLOLoss,
     accelerator: Accelerator,
-    tb_logger: Optional[SummaryWriter],
+    tb_logger: SummaryWriter,
     global_train_step: int,
     gradient_clip_thd: float = 10.0,
 ) -> int:
