@@ -1,4 +1,0 @@
-- Key paper: https://arxiv.org/pdf/1706.03762
-- The Illustrated Transformer guide: https://jalammar.github.io/illustrated-transformer/
-- Visual Transformer: https://arxiv.org/pdf/2010.11929
-- Swin Transformer: https://arxiv.org/pdf/2103.14030
