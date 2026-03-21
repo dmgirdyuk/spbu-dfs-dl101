@@ -38,7 +38,7 @@ def seed_everything(seed: int = 314159, torch_deterministic: bool = False) -> No
 def weight_init_experiment(
     batch_size: int = 8,
     h_dim: int = 4096,
-    layers_num: int = 6,
+    layers_num: int = 5,
     std: float = 0.01,
     act_func: Callable[[Tensor], Tensor] = relu,
     init_type: WeightInitName = "random",
@@ -61,8 +61,13 @@ def weight_init_experiment(
     else:
         raise NotImplementedError
 
-    # in xavier, the mistake is intentional to mark ReLU case
-    gain = 2 ** 0.5 if "relu" in act_func.__name__ and "xavier" not in tag else 1.0
+    if "relu" in act_func.__name__ and "xavier" not in tag:
+        # in xavier, the mistake is intentional to mark ReLU case
+        gain = 2 ** 0.5
+    elif "tanh" in act_func.__name__:
+        gain = 5/3
+    else:
+        gain = 1
 
     dims = [h_dim] * layers_num
     hidden_states = []
@@ -91,6 +96,7 @@ def _xavier_uni_weight_init(
 def _xavier_norm_weight_init(
     h_in: int, h_out: int, gain: float = 1.0, **_
 ) -> Tensor:
+    # return torch.nn.init.xavier_normal(torch.empty(h_in, h_out, dtype=torch.float32))
     return torch.randn(h_in, h_out) * gain * (2 / (h_in + h_out)) ** 0.5
 
 
